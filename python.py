@@ -93,7 +93,7 @@ def open_spreadsheet(client, spreadsheet_name):
 
 def main():
     client = authenticate_google_sheet()
-    spreadsheet_name = 'Directory Updates (CSV Loader)'  # Replace with your spreadsheet name
+    spreadsheet_name = 'Directory Updates (Excel Loader)'  # Replace with your spreadsheet name
     spreadsheet = open_spreadsheet(client, spreadsheet_name)
     
     path = input("Enter the path of the xlsx report file: ").strip()
