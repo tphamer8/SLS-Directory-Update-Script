@@ -2,21 +2,58 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import os
 import pandas as pd
+import re
 
 
+# Adding New Hires
+def add_new_hires(spreadsheet, path):
+    new_hires = spreadsheet.worksheet('New Hires')
+    print("Adding New Hires to Sheet:")
 
+    # Read existing names from the first column
+    existing_names = set(name[0] for name in new_hires.get_all_values()[1:])  # skip header
+    df = pd.read_excel(path)
+
+    for _, row in df.iterrows():
+        if isinstance(row['Category'], str) and 'New Hires' in row['Category']:
+            name = reformat_new_hire_names(row['Name'])
+            title = row['Business Title']
+            start_date = row['Projected Start Date'].strftime('%-m/%-d/%Y') if not pd.isna(row['Projected Start Date']) else ''
+
+            if name in existing_names:
+                print(f"⏭️  Skipping duplicate: {name}")
+                continue
+            
+            status = ''
+            supervisor = reformat_names(row['Supervisor'])
+            predecessor = row['Predecessor']
+
+            values = [name, title, start_date, status, supervisor, predecessor]
+            safe_values = [str(v) if pd.notna(v) else '' for v in values]
+            new_hires.append_row(safe_values)
+            if (safe_values[0] != ''):
+                print(f"✔️ Added: {safe_values[0]}, {safe_values[1]}, {safe_values[2]}")
+
+            
+# Reformat New Hire names
+def reformat_new_hire_names(name):
+    if not isinstance(name, str):
+        return ''
+    return " ".join(re.sub(r"\(.*?\)", "", name).strip().split(", ")[::-1])
 
 # Reformat Termination names
 def reformat_names(name):
-    first_last = first_last = " ".join(name.split(", ")[::-1])
-    return first_last
+    if not isinstance(name, str):
+        return ''
+    return " ".join(name.split(", ")[::-1])
+
 
 # Adding terminations that aren't duplicates
 def add_terminations(spreadsheet, path):
     terminations = spreadsheet.worksheet('Terminations')
     print("Adding Terminations to Sheet:")
 
-    # Read existing names from the first column (assumes "Name" is in column A)
+    # Read existing names from the first column
     existing_names = set(name[0] for name in terminations.get_all_values()[1:])  # skip header
 
     df = pd.read_excel(path)
@@ -65,8 +102,8 @@ def main():
         print(f"❌ File not found: {path}")
         exit(1)
 
-    # read_excel(path) 
     add_terminations(spreadsheet, path)
+    add_new_hires(spreadsheet, path)
 
 if __name__ == "__main__":
     main()
