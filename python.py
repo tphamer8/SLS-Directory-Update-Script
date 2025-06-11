@@ -18,7 +18,14 @@ def add_new_hires(spreadsheet, path):
         if isinstance(row['Category'], str) and 'New Hires' in row['Category']:
             name = reformat_new_hire_names(row['Name'])
             title = row['Business Title']
-            start_date = row['Projected Start Date'].strftime('%-m/%-d/%Y') if not pd.isna(row['Projected Start Date']) else ''
+            start_date = ''
+            if pd.notna(row['Projected Start Date']):
+                try:
+                    date_val = pd.to_datetime(row['Projected Start Date'], errors='coerce')
+                    if pd.notna(date_val):
+                        start_date = date_val.strftime('%-m/%-d/%Y')  # or use '%#m/%#d/%Y' on Windows
+                except Exception as e:
+                    print(f"⚠️ Error parsing date for {row['Name']}: {e}")
 
             if name in existing_names:
                 print(f"⏭️  Skipping duplicate: {name}")
@@ -69,8 +76,11 @@ def add_terminations(spreadsheet, path):
             department = row['Department']
             end_date = row['Estimated End Date'].strftime('%-m/%-d/%Y') if not pd.isna(row['Estimated End Date']) else ''
 
-            terminations.append_row([name, department, end_date])
-            print(f"✔️ Added: {name}, {department}, {end_date}")
+            values = [name, department, end_date]
+            safe_values = [str(v) if pd.notna(v) and v == v else '' for v in values]  # v == v excludes NaN
+            terminations.append_row(safe_values)
+            print(f"✔️ Added: {safe_values[0]}, {safe_values[1]}, {safe_values[2]}")
+
 
 # Testing by reading column
 def read_excel(path):
